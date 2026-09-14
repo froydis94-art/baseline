@@ -6,18 +6,27 @@ import { Progress } from "@/components/ui/Progress";
 import {
   completedCount,
   HABITS,
+  type HabitDefinition,
   type HabitId,
   type HabitState,
 } from "@/lib/habits";
 
 type HabitBoardProps = {
   state: HabitState;
+  habits?: HabitDefinition[];
+  summary?: string;
   onToggle: (id: HabitId) => void;
   onAdjust: (id: HabitId, delta: number) => void;
 };
 
-export function HabitBoard({ state, onToggle, onAdjust }: HabitBoardProps) {
-  const done = completedCount(state);
+export function HabitBoard({
+  state,
+  habits = HABITS,
+  summary,
+  onToggle,
+  onAdjust,
+}: HabitBoardProps) {
+  const done = completedCount(state, habits);
 
   return (
     <Card>
@@ -28,17 +37,17 @@ export function HabitBoard({ state, onToggle, onAdjust }: HabitBoardProps) {
             Sikre den nye normalen
           </h2>
           <p className="mt-1 max-w-xl text-sm text-slate-400">
-            Vinduet er stille. Disse fem løkkene er det som skal stå igjen når
-            dosen trappes ned.
+            {summary ??
+              "Vinduet er stille. Disse løkkene er det som skal stå igjen når dosen trappes ned."}
           </p>
         </div>
         <p className="text-sm tabular-nums text-slate-300">
-          {done}/{HABITS.length}
+          {done}/{habits.length}
         </p>
       </div>
-      <Progress value={done} max={HABITS.length} className="mb-5" />
+      <Progress value={done} max={habits.length} className="mb-5" />
       <ul className="space-y-3">
-        {HABITS.map((habit) => (
+        {habits.map((habit) => (
           <HabitRow
             key={habit.id}
             habit={habit}

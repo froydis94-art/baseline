@@ -85,10 +85,18 @@ function CompositionRing({
   );
 }
 
-export function CompositionPanel({ dashboard }: { dashboard: BodyDashboard }) {
+export function CompositionPanel({
+  dashboard,
+  connected = false,
+}: {
+  dashboard: BodyDashboard;
+  connected?: boolean;
+}) {
   const { latest, series } = dashboard;
   const sourceLabel =
-    latest.source === "withings" ? "Live via Terra" : "Prototype · Terra-mock";
+    latest.source === "withings" || connected
+      ? "Withings via Terra"
+      : "Prototype · Terra-mock";
 
   return (
     <Card className="flex flex-col gap-6">

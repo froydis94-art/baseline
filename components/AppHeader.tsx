@@ -1,7 +1,18 @@
 import { SosTrigger } from "@/components/sos/SosTrigger";
 import { Badge } from "@/components/ui/Badge";
+import { WINDOW_COPY, type OnboardingProfile } from "@/lib/onboarding";
 
-export function AppHeader({ onSos }: { onSos: () => void }) {
+export function AppHeader({
+  onSos,
+  profile,
+}: {
+  onSos: () => void;
+  profile: OnboardingProfile | null;
+}) {
+  const badge = profile?.windowPhase
+    ? WINDOW_COPY[profile.windowPhase].badge
+    : "Vindu aktivt";
+
   return (
     <header className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
       <div>
@@ -16,7 +27,10 @@ export function AppHeader({ onSos }: { onSos: () => void }) {
         </p>
       </div>
       <div className="flex items-center gap-3">
-        <Badge tone="sage">Vindu aktivt</Badge>
+        <Badge tone="sage">{badge}</Badge>
+        {profile?.withingsConnected ? (
+          <Badge tone="cyan">Withings</Badge>
+        ) : null}
         <SosTrigger onOpen={onSos} />
       </div>
     </header>
