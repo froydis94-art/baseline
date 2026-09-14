@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { CompositionPanel } from "@/components/biometrics/CompositionPanel";
 import { MetricsGrid } from "@/components/biometrics/MetricsGrid";
+import { RecoveryCard } from "@/components/biometrics/RecoveryCard";
 import { HabitBoard } from "@/components/habits/HabitBoard";
 import { SosProtocol } from "@/components/sos/SosProtocol";
 import { WindowStatus } from "@/components/WindowStatus";
@@ -16,6 +17,8 @@ import {
 } from "@/lib/habits";
 import {
   loadProfile,
+  loadSelectedTriggers,
+  resetBaselineStorage,
   triggerLabels,
   type OnboardingProfile,
 } from "@/lib/onboarding";
@@ -27,52 +30,76 @@ const storageKey = `baseline.habits.${todayKey()}`;
 export function Dashboard({ dashboard }: { dashboard: BodyDashboard }) {
   const router = useRouter();
   const [profile, setProfile] = useState<OnboardingProfile | null>(null);
+  const [triggers, setTriggers] = useState<OnboardingProfile["selectedTriggers"]>(
+    [],
+  );
   const [habits, setHabits] = useState<HabitState>(DEFAULT_HABIT_STATE);
   const [hydrated, setHydrated] = useState(false);
   const [sosOpen, setSosOpen] = useState(false);
 
   useEffect(() => {
     const stored = loadProfile();
-    if (!stored?.completed) {
-      router.replace("/onboarding");
-      return;
-    }
     setProfile(stored);
+    setTriggers(loadSelectedTriggers());
     try {
       const raw = window.localStorage.getItem(storageKey);
-      if (raw) setHabits(JSON.parse(raw) as HabitState);
+      if (raw) {
+        const parsed = JSON.parse(raw) as Partial<HabitState>;
+        setHabits({
+          ...DEFAULT_HABIT_STATE,
+          ...parsed,
+          meters: { ...DEFAULT_HABIT_STATE.meters, ...parsed.meters },
+          completed: { ...parsed.completed },
+          streakMarkedOn: { ...parsed.streakMarkedOn },
+        });
+      }
     } catch {
       setHabits(DEFAULT_HABIT_STATE);
     }
     setHydrated(true);
-  }, [router]);
+  }, []);
 
   useEffect(() => {
     if (!hydrated) return;
     window.localStorage.setItem(storageKey, JSON.stringify(habits));
   }, [habits, hydrated]);
 
-  const loops = useMemo(
-    () => habitsForTriggers(profile?.selectedTriggers ?? []),
-    [profile],
-  );
+  const loops = useMemo(() => habitsForTriggers(triggers), [triggers]);
 
   const summary = useMemo(() => {
-    const labels = triggerLabels(profile?.selectedTriggers ?? []);
+    const labels = triggerLabels(triggers);
     if (labels.length === 0) {
-      return "Vinduet er stille. Disse løkkene er det som skal stå igjen når dosen trappes ned.";
+      return "Standardløkker: protein, væskebalanse og Withings-restitusjon.";
     }
     return `Kalibrert mot ${labels.join(", ").toLowerCase()}.`;
-  }, [profile]);
+  }, [triggers]);
 
   function onToggle(id: HabitId) {
-    setHabits((current) => ({
-      ...current,
-      completed: {
-        ...current.completed,
-        [id]: !current.completed[id],
-      },
-    }));
+    const today = todayKey();
+    setHabits((current) => {
+      if (id === "urge-surf") {
+        const already = current.streakMarkedOn[id] === today;
+        const days = current.meters[id] ?? 0;
+        return {
+          ...current,
+          meters: {
+            ...current.meters,
+            [id]: Math.max(0, already ? days - 1 : days + 1),
+          },
+          streakMarkedOn: {
+            ...current.streakMarkedOn,
+            [id]: already ? undefined : today,
+          },
+        };
+      }
+      return {
+        ...current,
+        completed: {
+          ...current.completed,
+          [id]: !current.completed[id],
+        },
+      };
+    });
   }
 
   function onAdjust(id: HabitId, delta: number) {
@@ -80,19 +107,24 @@ export function Dashboard({ dashboard }: { dashboard: BodyDashboard }) {
     setHabits((current) => {
       const next = Math.max(0, (current.meters[id] ?? 0) + delta);
       const capped = definition?.target
-        ? Math.min(definition.target * 1.4, next)
-        : next;
+        ? Math.min(definition.target * 1.4, Number(next.toFixed(2)))
+        : Number(next.toFixed(2));
       return {
         ...current,
         meters: {
           ...current.meters,
-          [id]: Number(capped.toFixed(2)),
+          [id]: capped,
         },
       };
     });
   }
 
-  if (!hydrated || !profile) {
+  function resetOnboarding() {
+    resetBaselineStorage();
+    router.push("/onboarding");
+  }
+
+  if (!hydrated) {
     return <div className="min-h-screen bg-obsidian" />;
   }
 
@@ -103,9 +135,13 @@ export function Dashboard({ dashboard }: { dashboard: BodyDashboard }) {
         <WindowStatus dashboard={dashboard} profile={profile} />
         <CompositionPanel
           dashboard={dashboard}
-          connected={profile.withingsConnected}
+          connected={Boolean(profile?.withingsConnected)}
         />
       </div>
+      <RecoveryCard
+        dashboard={dashboard}
+        connected={Boolean(profile?.withingsConnected)}
+      />
       <MetricsGrid dashboard={dashboard} />
       <HabitBoard
         state={habits}
@@ -114,11 +150,24 @@ export function Dashboard({ dashboard }: { dashboard: BodyDashboard }) {
         onToggle={onToggle}
         onAdjust={onAdjust}
       />
-      <footer className="pb-4 text-xs leading-5 text-slate-500">
-        Baseline er et atferds- og biometri-verktøy, ikke medisinsk rådgivning.
-        Medikament, dose og nedtrapping avklares med behandler.
+      <footer className="space-y-3 pb-4 text-xs leading-5 text-slate-500">
+        <p>
+          Baseline er et atferds- og biometri-verktøy, ikke medisinsk
+          rådgivning. Medikament, dose og nedtrapping avklares med behandler.
+        </p>
+        <button
+          type="button"
+          onClick={resetOnboarding}
+          className="text-slate-600 underline-offset-4 transition-colors hover:text-slate-400 hover:underline"
+        >
+          Nullstill profil / Kjør onboarding på nytt
+        </button>
       </footer>
-      <SosProtocol open={sosOpen} onClose={() => setSosOpen(false)} />
+      <SosProtocol
+        open={sosOpen}
+        triggers={triggers}
+        onClose={() => setSosOpen(false)}
+      />
     </div>
   );
 }

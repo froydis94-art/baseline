@@ -1,4 +1,6 @@
 export const PROFILE_KEY = "baseline.profile";
+export const ONBOARDED_KEY = "baseline_onboarded";
+export const TRIGGERS_KEY = "selectedTriggers";
 
 export type WindowPhase = "weeks-1-4" | "months-2-4" | "taper-maintain";
 
@@ -124,6 +126,43 @@ export function loadProfile(): OnboardingProfile | null {
 
 export function saveProfile(profile: OnboardingProfile): void {
   window.localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+  window.localStorage.setItem(
+    TRIGGERS_KEY,
+    JSON.stringify(profile.selectedTriggers),
+  );
+  if (profile.completed) {
+    window.localStorage.setItem(ONBOARDED_KEY, "true");
+  }
+}
+
+export function loadSelectedTriggers(): TriggerId[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(TRIGGERS_KEY);
+    if (raw) return JSON.parse(raw) as TriggerId[];
+    return loadProfile()?.selectedTriggers ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export function isOnboarded(): boolean {
+  if (typeof window === "undefined") return false;
+  if (window.localStorage.getItem(ONBOARDED_KEY)) return true;
+  return Boolean(loadProfile()?.completed);
+}
+
+export function resetBaselineStorage(): void {
+  const doomed = Object.keys(window.localStorage).filter(
+    (key) =>
+      key === ONBOARDED_KEY ||
+      key === TRIGGERS_KEY ||
+      key === PROFILE_KEY ||
+      key.startsWith("baseline."),
+  );
+  for (const key of doomed) {
+    window.localStorage.removeItem(key);
+  }
 }
 
 export function triggerLabels(ids: TriggerId[]): string[] {

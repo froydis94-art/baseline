@@ -26,7 +26,7 @@ export function AppHeader({
           The medication creates the window. Baseline secures your new normal.
         </p>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <Badge tone="sage">{badge}</Badge>
         {profile?.withingsConnected ? (
           <Badge tone="cyan">Withings</Badge>

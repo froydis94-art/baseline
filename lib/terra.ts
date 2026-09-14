@@ -164,6 +164,10 @@ async function fetchTerraBody(): Promise<BodyDashboard | null> {
   return dashboardFromSeries(series, "withings");
 }
 
+export function getFallbackDashboard(): BodyDashboard {
+  return dashboardFromSeries(mockSeries(), "mock");
+}
+
 export async function fetchBodyDashboard(): Promise<BodyDashboard> {
   try {
     const live = await fetchTerraBody();
@@ -171,7 +175,7 @@ export async function fetchBodyDashboard(): Promise<BodyDashboard> {
   } catch {
     // Fall through to labeled mock data so the prototype stays usable.
   }
-  return dashboardFromSeries(mockSeries(), "mock");
+  return getFallbackDashboard();
 }
 
 export function leanMassScore(dashboard: BodyDashboard): number {

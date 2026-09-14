@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/Button";
 import { Progress } from "@/components/ui/Progress";
 import type { HabitDefinition, HabitState } from "@/lib/habits";
 import { habitDone } from "@/lib/habits";
-import { cn } from "@/lib/utils";
+import { cn, todayKey } from "@/lib/utils";
 
 type HabitRowProps = {
   habit: HabitDefinition;
@@ -13,8 +13,15 @@ type HabitRowProps = {
   onAdjust: (id: HabitDefinition["id"], delta: number) => void;
 };
 
+function stepLabel(habit: HabitDefinition, sign: "+" | "−"): string {
+  if (habit.unit === "g") return `${sign}${habit.step ?? 15}g`;
+  if (habit.unit === "L") return `${sign}${habit.step ?? 0.3}L`;
+  return sign;
+}
+
 export function HabitRow({ habit, state, onToggle, onAdjust }: HabitRowProps) {
-  const done = habitDone(habit, state);
+  const today = todayKey();
+  const done = habitDone(habit, state, today);
   const meter = state.meters[habit.id] ?? 0;
 
   return (
@@ -37,14 +44,14 @@ export function HabitRow({ habit, state, onToggle, onAdjust }: HabitRowProps) {
           <p className="mt-1 text-sm text-slate-400">{habit.intent}</p>
         </div>
 
-        {habit.kind === "toggle" ? (
+        {habit.kind === "streak" ? (
           <Button
             size="sm"
             variant={done ? "sage" : "line"}
             aria-pressed={done}
             onClick={() => onToggle(habit.id)}
           >
-            {done ? "Fullført" : "Marker"}
+            {done ? "I dag telt" : "Marker i dag"}
           </Button>
         ) : (
           <div className="flex items-center gap-2">
@@ -54,7 +61,7 @@ export function HabitRow({ habit, state, onToggle, onAdjust }: HabitRowProps) {
               aria-label={`Reduser ${habit.title}`}
               onClick={() => onAdjust(habit.id, -(habit.step ?? 1))}
             >
-              −
+              {stepLabel(habit, "−")}
             </Button>
             <Button
               size="sm"
@@ -62,7 +69,7 @@ export function HabitRow({ habit, state, onToggle, onAdjust }: HabitRowProps) {
               aria-label={`Øk ${habit.title}`}
               onClick={() => onAdjust(habit.id, habit.step ?? 1)}
             >
-              +
+              {stepLabel(habit, "+")}
             </Button>
           </div>
         )}
@@ -72,7 +79,7 @@ export function HabitRow({ habit, state, onToggle, onAdjust }: HabitRowProps) {
         <div className="mt-3">
           <div className="mb-2 flex items-baseline justify-between text-xs text-slate-400">
             <span className="tabular-nums text-slate-200">
-              {habit.unit === "L" ? meter.toFixed(2) : meter}
+              {habit.unit === "L" ? meter.toFixed(1) : meter}
               {habit.unit} / {habit.target}
               {habit.unit}
             </span>
@@ -80,6 +87,15 @@ export function HabitRow({ habit, state, onToggle, onAdjust }: HabitRowProps) {
           </div>
           <Progress value={meter} max={habit.target} tone="sage" />
         </div>
+      ) : null}
+
+      {habit.kind === "streak" ? (
+        <p className="mt-3 text-2xl font-semibold tabular-nums text-sage">
+          {meter}
+          <span className="ml-2 text-sm font-normal text-slate-400">
+            dager uten impuls-handling
+          </span>
+        </p>
       ) : null}
     </li>
   );
