@@ -1,0 +1,50 @@
+# Baseline — Habit & Body Metrics
+
+The medication creates the window. Baseline secures your new normal.
+
+You are building a digital behavior and biometrics tool for people losing weight on modern peptides / GLP-1. The drug lowers food noise. Baseline uses that window to protect lean mass and rewrite habit loops before taper.
+
+This is a behavior product, not a clinic. Never invent medical advice, dosing, or diagnoses. Frame copy around habits, signals, and stability — not treatment.
+
+## Product north star
+
+- Protect muscle while fat comes down.
+- Turn a chemically quiet appetite into durable routines.
+- Surface Withings / Terra biometrics so the user can see lean mass holding.
+- Offer a calm SOS intervention when food noise or old loops return.
+
+## Design system — Calm Biotech / Human Performance
+
+- Background: Obsidian / Deep Slate `#090D16`
+- Surfaces: Glassmorphic Slate `#131A29` with 1px border `#1E293B`
+- Accent Lean Mass / Stability: Bio-Sage `#10B981`
+- Accent Biometrics / Withings: Deep Cyan `#06B6D4`
+- SOS / Intervention: Calming Coral `#F43F5E`
+- Type: minimal sans-serif, high contrast, tight tracking on labels, tabular numbers on metrics
+- Cards are glass: translucent slate, blur, hairline border. No loud gradients, no playful illustration.
+- Motion stays slow and small. Coral is reserved for intervention — never decoration.
+
+## Architecture
+
+- `app/` — Next.js App Router. Server Components fetch; Client Components handle interaction.
+- `components/biometrics/` — body composition, trends, Terra/Withings surfaces
+- `components/habits/` — daily loops, protein, resistance, sleep, replacement behaviors
+- `components/sos/` — food-noise intervention protocol
+- `components/ui/` — primitive surfaces (Card, Button, Progress, Badge)
+- `lib/terra.ts` — Terra client + typed body snapshots. Mock when keys are missing.
+- `lib/utils.ts` — shared helpers (`cn`, formatting)
+
+Do not introduce a `src/` directory. Do not use Pages Router. Do not add medical claim copy.
+
+## Domain language
+
+Prefer: window, food noise, lean mass, stability, habit loop, replacement, taper, new normal.
+Avoid: hack, detox, miracle, before/after shame, calorie-shaming.
+
+## Engineering
+
+- TypeScript strict. No `any` unless interfacing with an untyped vendor payload — then narrow immediately.
+- Tailwind v4 tokens live in `app/globals.css` (`@theme`). Use those names; do not hardcode hex in components unless adding a new token.
+- Interactive state (habits, SOS, meters) stays on the client. Persistence for the prototype is `localStorage`.
+- Terra calls belong in `lib/terra.ts`. UI never talks to Terra directly.
+- Keep the first prototype local and honest: if Terra is not configured, show mock Withings data and label the source.
